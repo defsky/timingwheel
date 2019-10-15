@@ -55,6 +55,7 @@ func (t *Timer) Stop() bool {
 type bucket struct {
 	mu     sync.Mutex
 	timers *list.List
+    bit    int
 
 	expiration int64
 }
@@ -63,6 +64,7 @@ func newBucket() *bucket {
 	return &bucket{
 		timers:     list.New(),
 		expiration: -1,
+        bit: 32 << (^uint(0) >> 63),
 	}
 }
 
@@ -71,7 +73,19 @@ func (b *bucket) Expiration() int64 {
 }
 
 func (b *bucket) SetExpiration(expiration int64) bool {
-	return atomic.SwapInt64(&b.expiration, expiration) != expiration
+    if b.bit == 64 {
+	    return atomic.SwapInt64(&b.expiration, expiration) != expiration
+    } else {
+        ret := false
+        if b.expiration != expiration {
+            ret = true
+        }
+        b.mu.Lock()
+        b.expiration = expiration
+        b.mu.Unlock()
+
+        return ret
+    }
 }
 
 func (b *bucket) Add(t *Timer) {

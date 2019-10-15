@@ -1,4 +1,4 @@
-module timingwheel
+module github.com/defsky/timingwheel
 
 go 1.13
 
